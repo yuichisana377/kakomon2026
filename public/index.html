@@ -292,8 +292,7 @@ function renderSearchView(){
         </div>
         <div class="field wide" style="grid-column: 1 / -1;">
           <label>キーワード（タイトル・メモ・教科・先生）</label>
-          <input type="text" id="f-keyword" list="dl-keyword" autocomplete="off" placeholder="入力すると候補が表示されます（例：確率統計、行列、追試 など）">
-          <datalist id="dl-keyword"></datalist>
+          <input type="text" id="f-keyword" placeholder="例：確率統計、行列、追試 など">
         </div>
       </div>
       <div class="slip-footer">
@@ -321,7 +320,6 @@ function renderSearchView(){
   });
   updateTeacherOptions('');
   populateSubjectDatalistSearch();
-  populateKeywordDatalist();
   applyFilters();
 }
 
@@ -332,32 +330,18 @@ function populateSubjectDatalistSearch(){
   dl.innerHTML = subjects.map(s=>`<option value="${esc(s)}"></option>`).join('');
 }
 
-function populateKeywordDatalist(){
-  const dl = document.getElementById('dl-keyword');
-  if (!dl) return;
-  const vals = new Set();
-  entries.forEach(e=>{
-    if (e.title) vals.add(e.title);
-    if (e.subject) vals.add(e.subject);
-    if (e.teacher) vals.add(e.teacher);
-    if (e.note) vals.add(e.note);
-  });
-  const sorted = [...vals].sort((a,b)=>String(a).localeCompare(String(b),'ja'));
-  dl.innerHTML = sorted.map(v=>`<option value="${esc(v)}"></option>`).join('');
-}
-
 function updateTeacherOptions(selectedSubject){
   const teacherInput = document.getElementById('f-teacher');
   const dl = document.getElementById('dl-f-teacher');
   const currentValue = teacherInput.value;
-  const pool = selectedSubject
-    ? entries.filter(e => String(e.subject||'').toLowerCase().includes(selectedSubject.toLowerCase()))
-    : entries;
-  let teachers = uniqueSorted(pool.map(e=>e.teacher));
-  if (selectedSubject && teachers.length === 0){
-    // 該当教科にまだ先生が登録されていない場合は全体から候補を出す
-    teachers = uniqueSorted(entries.map(e=>e.teacher));
-  }
+  const trimmedSubject = String(selectedSubject || '').trim().toLowerCase();
+  // 教科欄が既存の教科と完全に一致している（＝候補から選択済み、または正確に入力済み）場合のみ、
+  // その教科を担当していた先生だけに絞り込む。入力途中（部分一致のみ）の場合は全員を表示する。
+  const exactPool = trimmedSubject
+    ? entries.filter(e => String(e.subject||'').trim().toLowerCase() === trimmedSubject)
+    : [];
+  const pool = exactPool.length > 0 ? exactPool : entries;
+  const teachers = uniqueSorted(pool.map(e=>e.teacher));
   dl.innerHTML = teachers.map(t=>`<option value="${esc(t)}"></option>`).join('');
   teacherInput.value = currentValue;
 }
