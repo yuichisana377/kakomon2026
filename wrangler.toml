@@ -2,9 +2,6 @@ name = "kakomon-archive"
 compatibility_date = "2024-07-28"
 pages_build_output_dir = "public"
 
-# Cloudflareダッシュボードで作成したKV NamespaceのIDに書き換えてください。
-# （ダッシュボードのGit連携でデプロイする場合はこのファイルなしでも、
-#   Pagesの設定画面からKV Bindingを追加すれば動作します）
 [[kv_namespaces]]
 binding = "KAKOMON_KV"
 id = "5935e0937799459ebd9e9cc7effb2093"
