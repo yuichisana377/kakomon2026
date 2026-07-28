@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>過去問検索</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EAE4D6;
+    --paper-card:#F3EFE4;
+    --ink:#22252B;
+    --ink-soft:#54524A;
+    --navy:#26415F;
+    --stamp:#A63A2E;
+    --teal:#3E6259;
+    --mustard:#B9862C;
+    --line:#BFB49F;
+    --line-soft:#D8D0BE;
+    --white:#FFFDF8;
+    --shadow: 0 2px 0 rgba(34,37,43,0.06), 0 8px 20px -12px rgba(34,37,43,0.25);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  #app{
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(34,37,43,0.035) 1px, transparent 0);
+    background-size: 14px 14px;
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    min-height:100vh;
+    padding: 28px 20px 60px;
+  }
+  .mono{ font-family:'JetBrains Mono', monospace; letter-spacing:0.02em; }
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  header.top{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    flex-wrap:wrap; gap:16px;
+    border-bottom: 3px double var(--ink);
+    padding-bottom:14px; margin-bottom:22px;
+  }
+  .title-block .eyebrow{
+    font-size:11px; letter-spacing:0.18em; color:var(--ink-soft);
+    text-transform:uppercase; margin-bottom:4px;
+  }
+  .title-block h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700; font-size:clamp(26px,4vw,34px);
+    margin:0; letter-spacing:0.02em;
+  }
+  .title-block .sub{ font-size:13px; color:var(--ink-soft); margin-top:4px; }
+
+  .tabswitch{ display:flex; gap:0; border:1.5px solid var(--ink); border-radius:3px; overflow:hidden; }
+  .tabswitch button{
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:600;
+    padding:9px 16px; background:var(--paper-card); border:none; cursor:pointer;
+    color:var(--ink); letter-spacing:0.04em;
+  }
+  .tabswitch button + button{ border-left:1.5px solid var(--ink); }
+  .tabswitch button.active{ background:var(--navy); color:var(--white); }
+
+  /* ---------- Search / filter slip ---------- */
+  .slip{
+    background:var(--white);
+    border:1.5px solid var(--ink);
+    border-radius:4px;
+    padding:18px 20px 14px;
+    box-shadow:var(--shadow);
+    margin-bottom:24px;
+    position:relative;
+  }
+  .slip::before{
+    content:"検索票 SEARCH SLIP";
+    position:absolute; top:-11px; left:16px;
+    background:var(--paper); padding:0 8px;
+    font-family:'JetBrains Mono',monospace; font-size:10.5px;
+    letter-spacing:0.14em; color:var(--ink-soft);
+  }
+  .slip-grid{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+    gap:14px 16px; margin-bottom:12px;
+  }
+  .field label{
+    display:block; font-family:'JetBrains Mono',monospace; font-size:10.5px;
+    color:var(--ink-soft); letter-spacing:0.08em; margin-bottom:4px;
+  }
+  .field select, .field input[type="text"]{
+    width:100%; font-family:'Zen Kaku Gothic New',sans-serif; font-size:14px;
+    border:none; border-bottom:1.5px solid var(--line); background:transparent;
+    padding:5px 2px; color:var(--ink); outline:none;
+  }
+  .field select:focus, .field input:focus{ border-bottom-color:var(--navy); }
+  .slip-footer{
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px dashed var(--line); padding-top:10px; margin-top:4px;
+  }
+  .count-badge{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-soft); }
+  .reset-btn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; background:none;
+    border:1px solid var(--line); border-radius:3px; padding:5px 10px; cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .reset-btn:hover{ border-color:var(--ink); color:var(--ink); }
+
+  /* ---------- Result cards ---------- */
+  .cards{ display:grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap:16px; }
+  .card{
+    background:var(--paper-card); border:1.3px solid var(--ink);
+    border-radius:3px; box-shadow:var(--shadow);
+    position:relative; padding:16px 16px 14px 30px; overflow:hidden;
+  }
+  .card::before, .card::after{
+    content:""; position:absolute; left:11px; width:9px; height:9px;
+    border-radius:50%; background:var(--paper);
+    border:1.3px solid var(--line);
+  }
+  .card::before{ top:16px; }
+  .card::after{ bottom:16px; }
+  .card .tab{
+    position:absolute; top:0; right:0; font-family:'JetBrains Mono',monospace;
+    font-size:10.5px; color:var(--white); padding:3px 10px 3px 12px;
+    border-bottom-left-radius:8px; letter-spacing:0.05em; font-weight:600;
+  }
+  .card h3{
+    font-family:'Shippori Mincho',serif; font-size:17px; margin:6px 60px 4px 0;
+    line-height:1.35;
+  }
+  .card .meta{ font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-soft); line-height:1.9; }
+  .card .meta b{ color:var(--ink); font-weight:600; }
+  .card .note{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; line-height:1.5; }
+  .card .openbtn{
+    display:inline-flex; align-items:center; gap:6px; margin-top:12px;
+    background:var(--stamp); color:var(--white); text-decoration:none;
+    font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;
+    padding:7px 12px; border-radius:3px; letter-spacing:0.03em;
+    transform:rotate(-0.4deg);
+    border:1px solid rgba(0,0,0,0.15);
+  }
+  .card .openbtn:hover{ filter:brightness(1.08); }
+
+  .empty{
+    border:1.5px dashed var(--line); border-radius:4px; padding:40px 20px;
+    text-align:center; color:var(--ink-soft); font-size:14px; background:var(--paper-card);
+  }
+  .empty b{ display:block; font-family:'Shippori Mincho',serif; font-size:17px; color:var(--ink); margin-bottom:6px; }
+
+  /* ---------- Admin ---------- */
+  .admin-gate{
+    max-width:340px; margin:40px auto; background:var(--white);
+    border:1.5px solid var(--ink); border-radius:4px; padding:24px;
+    box-shadow:var(--shadow); text-align:center;
+  }
+  .admin-gate h2{ font-family:'Shippori Mincho',serif; font-size:19px; margin:0 0 6px; }
+  .admin-gate p{ font-size:12.5px; color:var(--ink-soft); margin:0 0 16px; }
+  .admin-gate input{
+    width:100%; padding:9px 10px; border:1.5px solid var(--line); border-radius:3px;
+    font-family:'JetBrains Mono',monospace; font-size:14px; margin-bottom:10px; outline:none;
+  }
+  .admin-gate input:focus{ border-color:var(--navy); }
+  .admin-gate button{
+    width:100%; padding:10px; background:var(--navy); color:var(--white); border:none;
+    border-radius:3px; font-family:'JetBrains Mono',monospace; font-weight:600; cursor:pointer; letter-spacing:0.04em;
+  }
+  .admin-gate .err{ color:var(--stamp); font-size:12px; margin-bottom:8px; min-height:14px; }
+
+  .admin-panel .slip::before{ content:"新規登録 NEW ENTRY"; }
+  .form-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:14px 16px; margin-bottom:14px; }
+  .form-grid .field.wide{ grid-column: 1 / -1; }
+  .submit-row{ display:flex; gap:10px; justify-content:flex-end; }
+  .btn{
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:600;
+    padding:9px 16px; border-radius:3px; cursor:pointer; letter-spacing:0.03em; border:1.5px solid var(--ink);
+  }
+  .btn-primary{ background:var(--navy); color:var(--white); border-color:var(--navy); }
+  .btn-ghost{ background:transparent; color:var(--ink); }
+
+  table.ledger{ width:100%; border-collapse:collapse; background:var(--white); border:1.5px solid var(--ink); border-radius:4px; overflow:hidden; }
+  table.ledger th{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; text-align:left; letter-spacing:0.05em;
+    background:var(--navy); color:var(--white); padding:9px 10px;
+  }
+  table.ledger td{
+    font-size:13px; padding:9px 10px; border-top:1px solid var(--line-soft); vertical-align:top;
+  }
+  table.ledger tr:nth-child(even) td{ background:#F7F3E9; }
+  .link-cell a{ color:var(--navy); font-family:'JetBrains Mono',monospace; font-size:11.5px; word-break:break-all; }
+  .del-btn{
+    background:none; border:1px solid var(--stamp); color:var(--stamp); border-radius:3px;
+    font-family:'JetBrains Mono',monospace; font-size:11px; padding:4px 8px; cursor:pointer;
+  }
+  .del-btn:hover{ background:var(--stamp); color:var(--white); }
+  .section-title{ font-family:'Shippori Mincho',serif; font-size:16px; margin:26px 0 10px; }
+  .status-msg{ font-size:12.5px; color:var(--teal); font-family:'JetBrains Mono',monospace; min-height:16px; margin-top:6px; }
+  .status-msg.error{ color:var(--stamp); }
+
+  footer.foot{ text-align:center; margin-top:40px; font-size:11.5px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace; }
+
+  @media (max-width:520px){
+    .card{ padding-left:26px; }
+    header.top{ flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="wrap">
+    <header class="top">
+      <div class="title-block">
+        <div class="eyebrow">Past Exam Archive</div>
+        <h1>過去問アーカイブ</h1>
+        <div class="sub">過去問検索サイト</div>
+      </div>
+      <div class="tabswitch">
+        <button id="tab-search" class="active">検索</button>
+        <button id="tab-admin">管理者</button>
+      </div>
+    </header>
+
+    <div id="view-search"></div>
+    <div id="view-admin" style="display:none;"></div>
+
+    <footer class="foot">KAKOMON ARCHIVE — 学科内限定共有 / PDFはSharePoint等の外部リンクで管理</footer>
+  </div>
+</div>
+
+<script>
+// パスワードはこのファイルには一切含まれません。Cloudflare Pages側の
+// 環境変数(ADMIN_PASSWORD_HASH)としてサーバー側だけに保存され、
+// /api/verify, /api/entries などのAPI経由でサーバー側が照合します。
+
+let entries = [];
+let isAdmin = false;
+let editingId = null;
+let adminPassword = null; // ログイン中だけメモリ上に保持（保存はしない）
+
+const tagPalette = ['var(--navy)','var(--stamp)','var(--teal)','var(--mustard)'];
+function colorFor(str){
+  let h = 0;
+  for (let i=0;i<str.length;i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
+  return tagPalette[h % tagPalette.length];
+}
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function genId(){ return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+async function loadEntries(){
+  try{
+    const res = await fetch('/api/entries');
+    entries = res.ok ? await res.json() : [];
+  }catch(e){
+    entries = [];
+  }
+}
+
+/* ---------------- SEARCH VIEW ---------------- */
+function uniqueSorted(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ja')); }
+
+function renderSearchView(){
+  const years = uniqueSorted(entries.map(e=>e.year)).sort((a,b)=>b-a);
+  const subjects = uniqueSorted(entries.map(e=>e.subject));
+  const teachers = uniqueSorted(entries.map(e=>e.teacher));
+
+  const html = `
+    <div class="slip">
+      <div class="slip-grid">
+        <div class="field">
+          <label>年度</label>
+          <select id="f-year"><option value="">すべて</option>${years.map(y=>`<option value="${esc(y)}">${esc(y)}年度</option>`).join('')}</select>
+        </div>
+        <div class="field">
+          <label>学期</label>
+          <select id="f-term"><option value="">すべて</option><option>前期</option><option>後期</option></select>
+        </div>
+        <div class="field">
+          <label>試験区分</label>
+          <select id="f-type"><option value="">すべて</option><option>中間</option><option>期末</option><option>小テスト</option></select>
+        </div>
+        <div class="field">
+          <label>教科</label>
+          <input type="text" id="f-subject" list="dl-f-subject" autocomplete="off" placeholder="入力すると候補が表示されます">
+          <datalist id="dl-f-subject"></datalist>
+        </div>
+        <div class="field">
+          <label>先生</label>
+          <input type="text" id="f-teacher" list="dl-f-teacher" autocomplete="off" placeholder="入力すると候補が表示されます">
+          <datalist id="dl-f-teacher"></datalist>
+        </div>
+        <div class="field wide" style="grid-column: 1 / -1;">
+          <label>キーワード（タイトル・メモ・教科・先生）</label>
+          <input type="text" id="f-keyword" list="dl-keyword" autocomplete="off" placeholder="入力すると候補が表示されます（例：確率統計、行列、追試 など）">
+          <datalist id="dl-keyword"></datalist>
+        </div>
+      </div>
+      <div class="slip-footer">
+        <span class="count-badge" id="result-count"></span>
+        <button class="reset-btn" id="f-reset">条件をリセット</button>
+      </div>
+    </div>
+    <div class="cards" id="result-cards"></div>
+  `;
+  document.getElementById('view-search').innerHTML = html;
+
+  ['f-year','f-term','f-type'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', applyFilters);
+  });
+  document.getElementById('f-teacher').addEventListener('input', applyFilters);
+  document.getElementById('f-subject').addEventListener('input', ()=>{
+    updateTeacherOptions(document.getElementById('f-subject').value.trim());
+    applyFilters();
+  });
+  document.getElementById('f-keyword').addEventListener('input', applyFilters);
+  document.getElementById('f-reset').addEventListener('click', ()=>{
+    ['f-year','f-term','f-type','f-subject','f-teacher'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-keyword').value='';
+    applyFilters();
+  });
+  updateTeacherOptions('');
+  populateSubjectDatalistSearch();
+  populateKeywordDatalist();
+  applyFilters();
+}
+
+function populateSubjectDatalistSearch(){
+  const dl = document.getElementById('dl-f-subject');
+  if (!dl) return;
+  const subjects = uniqueSorted(entries.map(e=>e.subject));
+  dl.innerHTML = subjects.map(s=>`<option value="${esc(s)}"></option>`).join('');
+}
+
+function populateKeywordDatalist(){
+  const dl = document.getElementById('dl-keyword');
+  if (!dl) return;
+  const vals = new Set();
+  entries.forEach(e=>{
+    if (e.title) vals.add(e.title);
+    if (e.subject) vals.add(e.subject);
+    if (e.teacher) vals.add(e.teacher);
+    if (e.note) vals.add(e.note);
+  });
+  const sorted = [...vals].sort((a,b)=>String(a).localeCompare(String(b),'ja'));
+  dl.innerHTML = sorted.map(v=>`<option value="${esc(v)}"></option>`).join('');
+}
+
+function updateTeacherOptions(selectedSubject){
+  const teacherInput = document.getElementById('f-teacher');
+  const dl = document.getElementById('dl-f-teacher');
+  const currentValue = teacherInput.value;
+  const pool = selectedSubject
+    ? entries.filter(e => String(e.subject||'').toLowerCase().includes(selectedSubject.toLowerCase()))
+    : entries;
+  let teachers = uniqueSorted(pool.map(e=>e.teacher));
+  if (selectedSubject && teachers.length === 0){
+    // 該当教科にまだ先生が登録されていない場合は全体から候補を出す
+    teachers = uniqueSorted(entries.map(e=>e.teacher));
+  }
+  dl.innerHTML = teachers.map(t=>`<option value="${esc(t)}"></option>`).join('');
+  teacherInput.value = currentValue;
+}
+
+function applyFilters(){
+  const year = document.getElementById('f-year').value;
+  const term = document.getElementById('f-term').value;
+  const type = document.getElementById('f-type').value;
+  const subject = document.getElementById('f-subject').value.trim();
+  const teacher = document.getElementById('f-teacher').value.trim();
+  const keyword = document.getElementById('f-keyword').value.trim().toLowerCase();
+
+  const filtered = entries.filter(e=>{
+    if (year && String(e.year) !== String(year)) return false;
+    if (term && e.term !== term) return false;
+    if (type && e.examType !== type) return false;
+    if (subject && !String(e.subject||'').toLowerCase().includes(subject.toLowerCase())) return false;
+    if (teacher && !String(e.teacher||'').toLowerCase().includes(teacher.toLowerCase())) return false;
+    if (keyword){
+      const hay = `${e.title||''} ${e.note||''} ${e.subject||''} ${e.teacher||''}`.toLowerCase();
+      if (!hay.includes(keyword)) return false;
+    }
+    return true;
+  }).sort((a,b)=> (b.year - a.year) || String(a.subject).localeCompare(String(b.subject),'ja'));
+
+  document.getElementById('result-count').textContent = `${filtered.length} 件 / 全 ${entries.length} 件`;
+
+  const cardsEl = document.getElementById('result-cards');
+  if (filtered.length === 0){
+    cardsEl.innerHTML = `<div class="empty" style="grid-column:1/-1;">
+      <b>該当する過去問がありません</b>
+      検索条件を変えてみるか、管理者に登録を依頼してください。
+    </div>`;
+    return;
+  }
+  cardsEl.innerHTML = filtered.map(e=>`
+    <div class="card">
+      <span class="tab" style="background:${colorFor(e.subject||'?')}">${esc(e.subject||'教科未設定')}</span>
+      <h3>${esc(e.title || (e.subject + ' ' + e.examType))}</h3>
+      <div class="meta">
+        <div><b>年度</b> ${esc(e.year)}年度・${esc(e.term)}・${esc(e.examType)}</div>
+        <div><b>担当</b> ${esc(e.teacher || '未記入')}先生</div>
+      </div>
+      ${e.note ? `<div class="note">${esc(e.note)}</div>` : ''}
+      <a class="openbtn" href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">PDFを開く ↗</a>
+    </div>
+  `).join('');
+}
+
+/* ---------------- ADMIN VIEW ---------------- */
+function renderAdminView(){
+  if (!isAdmin){
+    document.getElementById('view-admin').innerHTML = `
+      <div class="admin-gate">
+        <h2>管理者ログイン</h2>
+        <p>登録・編集には管理者パスワードが必要です</p>
+        <div class="err" id="gate-err"></div>
+        <input type="password" id="gate-pw" placeholder="パスワード">
+        <button id="gate-btn">ログイン</button>
+      </div>
+    `;
+    document.getElementById('gate-btn').addEventListener('click', tryLogin);
+    document.getElementById('gate-pw').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
+    return;
+  }
+  renderAdminPanel();
+}
+
+async function tryLogin(){
+  const pw = document.getElementById('gate-pw').value;
+  const btn = document.getElementById('gate-btn');
+  btn.disabled = true;
+  try{
+    const res = await fetch('/api/verify', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pw })
+    });
+    if (res.ok){
+      isAdmin = true;
+      adminPassword = pw;
+      renderAdminView();
+    } else {
+      document.getElementById('gate-err').textContent = 'パスワードが違います';
+    }
+  }catch(e){
+    document.getElementById('gate-err').textContent = '通信エラーが発生しました';
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function renderAdminPanel(){
+  const el = document.getElementById('view-admin');
+  el.innerHTML = `
+    <div class="admin-panel">
+      <div class="slip">
+        <div class="form-grid">
+          <div class="field"><label>年度 *</label><input type="text" id="in-year" placeholder="例：2025"></div>
+          <div class="field"><label>学期 *</label>
+            <select id="in-term"><option value="前期">前期</option><option value="後期">後期</option></select>
+          </div>
+          <div class="field"><label>試験区分 *</label>
+            <select id="in-type"><option value="中間">中間</option><option value="期末">期末</option><option value="小テスト">小テスト</option></select>
+          </div>
+          <div class="field"><label>教科 *</label><input type="text" id="in-subject" list="dl-subjects" autocomplete="off" placeholder="例：線形代数学（既存の教科は候補から選択可）"></div>
+          <div class="field"><label>先生</label><input type="text" id="in-teacher" list="dl-teachers" autocomplete="off" placeholder="例：山田（既存の先生は候補から選択可）"></div>
+          <datalist id="dl-subjects"></datalist>
+          <datalist id="dl-teachers"></datalist>
+          <div class="field wide"><label>タイトル（任意・空欄なら自動生成）</label><input type="text" id="in-title" placeholder="例：線形代数学 期末（2025）"></div>
+          <div class="field wide"><label>PDFリンク（SharePoint等）*</label><input type="text" id="in-url" placeholder="https://..."></div>
+          <div class="field wide"><label>メモ（難易度・出題傾向など任意）</label><input type="text" id="in-note" placeholder="例：持ち込み可、計算問題中心"></div>
+        </div>
+        <div class="submit-row">
+          <button class="btn btn-ghost" id="in-cancel" style="display:none;">編集をキャンセル</button>
+          <button class="btn btn-primary" id="in-submit">登録する</button>
+        </div>
+        <div class="status-msg" id="in-status"></div>
+      </div>
+
+      <div class="section-title">登録済み一覧（${entries.length}件）</div>
+      <div style="overflow-x:auto;">
+        <table class="ledger">
+          <thead><tr>
+            <th>年度</th><th>学期</th><th>区分</th><th>教科</th><th>先生</th><th>リンク</th><th>操作</th>
+          </tr></thead>
+          <tbody id="ledger-body"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.getElementById('in-submit').addEventListener('click', submitEntry);
+  document.getElementById('in-cancel').addEventListener('click', cancelEdit);
+  populateSubjectDatalist();
+  populateTeacherDatalist(document.getElementById('in-subject').value.trim());
+  document.getElementById('in-subject').addEventListener('input', ()=>{
+    populateTeacherDatalist(document.getElementById('in-subject').value.trim());
+  });
+  renderLedgerRows();
+}
+
+function populateSubjectDatalist(){
+  const dl = document.getElementById('dl-subjects');
+  const subjects = uniqueSorted(entries.map(e=>e.subject));
+  dl.innerHTML = subjects.map(s=>`<option value="${esc(s)}"></option>`).join('');
+}
+
+function populateTeacherDatalist(subjectFilter){
+  const dl = document.getElementById('dl-teachers');
+  const pool = subjectFilter ? entries.filter(e=>e.subject===subjectFilter) : entries;
+  let teachers = uniqueSorted(pool.map(e=>e.teacher));
+  if (subjectFilter && teachers.length === 0){
+    // 該当教科にまだ先生が登録されていない場合は全体から候補を出す
+    teachers = uniqueSorted(entries.map(e=>e.teacher));
+  }
+  dl.innerHTML = teachers.map(t=>`<option value="${esc(t)}"></option>`).join('');
+}
+
+function renderLedgerRows(){
+  const body = document.getElementById('ledger-body');
+  if (entries.length === 0){
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--ink-soft);">まだ登録がありません</td></tr>`;
+    return;
+  }
+  const sorted = [...entries].sort((a,b)=> (b.year - a.year));
+  body.innerHTML = sorted.map(e=>`
+    <tr>
+      <td>${esc(e.year)}</td>
+      <td>${esc(e.term)}</td>
+      <td>${esc(e.examType)}</td>
+      <td>${esc(e.subject)}</td>
+      <td>${esc(e.teacher)}</td>
+      <td class="link-cell"><a href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.url)}</a></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost" style="padding:4px 8px; font-size:11px;" onclick="startEdit('${e.id}')">編集</button>
+        <button class="del-btn" onclick="deleteEntry('${e.id}')">削除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function readForm(){
+  return {
+    year: document.getElementById('in-year').value.trim(),
+    term: document.getElementById('in-term').value,
+    examType: document.getElementById('in-type').value,
+    subject: document.getElementById('in-subject').value.trim(),
+    teacher: document.getElementById('in-teacher').value.trim(),
+    title: document.getElementById('in-title').value.trim(),
+    url: document.getElementById('in-url').value.trim(),
+    note: document.getElementById('in-note').value.trim(),
+  };
+}
+
+async function submitEntry(){
+  const statusEl = document.getElementById('in-status');
+  const data = readForm();
+  if (!data.year || !data.subject || !data.url){
+    statusEl.textContent = '年度・教科・PDFリンクは必須です';
+    statusEl.className = 'status-msg error';
+    return;
+  }
+  try{
+    let res;
+    if (editingId){
+      res = await fetch('/api/entries/' + encodeURIComponent(editingId), {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password: adminPassword, entry: data })
+      });
+    } else {
+      res = await fetch('/api/entries', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ password: adminPassword, entry: data })
+      });
+    }
+    if (res.status === 401){
+      statusEl.textContent = '認証切れです。もう一度ログインしてください';
+      statusEl.className = 'status-msg error';
+      isAdmin = false; adminPassword = null;
+      return;
+    }
+    if (!res.ok) throw new Error('save failed');
+    await loadEntries();
+    statusEl.textContent = editingId ? '更新しました' : '登録しました';
+    statusEl.className = 'status-msg';
+    cancelEdit();
+    populateSubjectDatalist();
+    renderLedgerRows();
+  }catch(e){
+    statusEl.textContent = '保存に失敗しました。もう一度お試しください';
+    statusEl.className = 'status-msg error';
+  }
+}
+
+function startEdit(id){
+  const e = entries.find(x=>x.id===id);
+  if (!e) return;
+  editingId = id;
+  document.getElementById('in-year').value = e.year || '';
+  document.getElementById('in-term').value = e.term || '前期';
+  document.getElementById('in-type').value = e.examType || '中間';
+  document.getElementById('in-subject').value = e.subject || '';
+  populateTeacherDatalist(e.subject || '');
+  document.getElementById('in-teacher').value = e.teacher || '';
+  document.getElementById('in-title').value = e.title || '';
+  document.getElementById('in-url').value = e.url || '';
+  document.getElementById('in-note').value = e.note || '';
+  document.getElementById('in-submit').textContent = '更新する';
+  document.getElementById('in-cancel').style.display = 'inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelEdit(){
+  editingId = null;
+  ['in-year','in-teacher','in-subject','in-title','in-url','in-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('in-term').value = '前期';
+  document.getElementById('in-type').value = '中間';
+  document.getElementById('in-submit').textContent = '登録する';
+  document.getElementById('in-cancel').style.display = 'none';
+  populateTeacherDatalist('');
+}
+
+async function deleteEntry(id){
+  if (!confirm('この過去問を削除しますか？')) return;
+  try{
+    const res = await fetch('/api/entries/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ password: adminPassword })
+    });
+    if (res.status === 401){
+      alert('認証切れです。もう一度ログインしてください');
+      isAdmin = false; adminPassword = null;
+      renderAdminView();
+      return;
+    }
+    if (!res.ok) throw new Error('delete failed');
+    await loadEntries();
+    populateSubjectDatalist();
+    populateTeacherDatalist(document.getElementById('in-subject').value.trim());
+    renderLedgerRows();
+  }catch(e){
+    alert('削除に失敗しました。もう一度お試しください');
+  }
+}
+window.startEdit = startEdit;
+window.deleteEntry = deleteEntry;
+
+/* ---------------- TAB SWITCH ---------------- */
+function switchTab(target){
+  document.getElementById('view-search').style.display = target==='search' ? 'block' : 'none';
+  document.getElementById('view-admin').style.display = target==='admin' ? 'block' : 'none';
+  document.getElementById('tab-search').classList.toggle('active', target==='search');
+  document.getElementById('tab-admin').classList.toggle('active', target==='admin');
+  if (target === 'admin') renderAdminView();
+}
+document.getElementById('tab-search').addEventListener('click', ()=>switchTab('search'));
+document.getElementById('tab-admin').addEventListener('click', ()=>switchTab('admin'));
+
+/* ---------------- INIT ---------------- */
+(async function init(){
+  document.getElementById('view-search').innerHTML = '<div class="empty">読み込み中...</div>';
+  await loadEntries();
+  renderSearchView();
+})();
+</script>
+</body>
+</html>
